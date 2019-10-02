@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<layout version="0.1.0">
+  <hooks_adminhtml_hook_index>
+	<reference name="content">
+	  <block type="hooks/adminhtml_hook" name="hook" />
+	</reference>
+  </hooks_adminhtml_hook_index>
+  <hooks_adminhtml_propagation_index>
+	<reference name="content">
+	  <block type="hooks/adminhtml_propagation" name="propagation" />
+	</reference>
+  </hooks_adminhtml_propagation_index>
+</layout>

@@ -1,0 +1,150 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Wdarking_Hooks>
+            <version>0.1.0</version>
+        </Wdarking_Hooks>
+    </modules>
+    <global>
+        <helpers>
+            <hooks>
+                <class>Wdarking_Hooks_Helper</class>
+            </hooks>
+        </helpers>
+        <blocks>
+            <hooks>
+                <class>Wdarking_Hooks_Block</class>
+            </hooks>
+        </blocks>
+        <models>
+            <hooks>
+                <class>Wdarking_Hooks_Model</class>
+                <resourceModel>hooks_mysql4</resourceModel>
+            </hooks>
+            <hooks_mysql4>
+                <class>Wdarking_Hooks_Model_Mysql4</class>
+                <entities>
+                    <hook>
+                        <table>wdarking_hooks_hooks</table>
+                    </hook>
+                    <propagation>
+                        <table>wdarking_hooks_propagations</table>
+                    </propagation>
+                </entities>
+            </hooks_mysql4>
+        </models>
+        <resources>
+            <wdarking_hooks_setup>
+                <setup>
+                    <module>Wdarking_Hooks</module>
+                </setup>
+                <connection>
+                    <use>core_setup</use>
+                </connection>
+            </wdarking_hooks_setup>
+            <wdarking_hooks_write>
+                <connection>
+                    <use>core_write</use>
+                </connection>
+            </wdarking_hooks_write>
+            <wdarking_hooks_read>
+                <connection>
+                    <use>core_read</use>
+                </connection>
+            </wdarking_hooks_read>
+        </resources>
+        <events>
+            <customer_save_before>
+                <!-- identifier of the event we want to catch -->
+                <observers>
+                    <customer_save_before_handler>
+                        <!-- identifier of the event handler -->
+                        <type>model</type>
+                        <!-- class method call type; valid are model, object and singleton -->
+                        <class>hooks/observer</class>
+                        <!-- observers class alias -->
+                        <method>customerSaveBefore</method>
+                        <!-- observer's method to be called -->
+                        <args></args>
+                        <!-- additional arguments passed to observer -->
+                    </customer_save_before_handler>
+                </observers>
+            </customer_save_before>
+        </events>
+    </global>
+    <admin>
+        <routers>
+            <hooks>
+                <use>admin</use>
+                <args>
+                    <module>Wdarking_Hooks</module>
+                    <frontName>admin_hooks</frontName>
+                </args>
+            </hooks>
+        </routers>
+    </admin>
+    <adminhtml>
+        <menu>
+            <hooks module="hooks">
+                <title>Wdarking Hooks</title>
+                <sort_order>100</sort_order>
+                <children>
+                    <hook module="hooks">
+                        <title>Manage Hook</title>
+                        <sort_order>20</sort_order>
+                        <action>admin_hooks/adminhtml_hook</action>
+                    </hook>
+                    <propagation module="hooks">
+                        <title>Manage Propagation</title>
+                        <sort_order>30</sort_order>
+                        <action>admin_hooks/adminhtml_propagation</action>
+                    </propagation>
+                </children>
+            </hooks>
+        </menu>
+        <acl>
+            <resources>
+                <all>
+                    <title>Allow Everything</title>
+                </all>
+                <admin>
+                    <children>
+                        <hooks translate="title" module="hooks">
+                            <title>Hooks</title>
+                            <sort_order>1000</sort_order>
+                            <children>
+                                <hook translate="title">
+                                    <title>Manage Hook</title>
+                                    <sort_order>20</sort_order>
+                                </hook>
+                                <propagation translate="title">
+                                    <title>Manage Propagation</title>
+                                    <sort_order>30</sort_order>
+                                </propagation>
+                            </children>
+                        </hooks>
+                    </children>
+                </admin>
+            </resources>
+        </acl>
+        <layout>
+            <updates>
+                <hooks>
+                    <file>hooks.xml</file>
+                </hooks>
+            </updates>
+        </layout>
+    </adminhtml>
+    <crontab>
+        <jobs>
+            <hooks_hookpropagator>
+                <schedule>
+                    <cron_expr>* * * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>hooks/cron::hookPropagator</model>
+                </run>
+            </hooks_hookpropagator>
+        </jobs>
+    </crontab>
+</config>
