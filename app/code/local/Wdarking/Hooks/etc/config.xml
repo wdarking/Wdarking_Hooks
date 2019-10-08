@@ -53,24 +53,18 @@
                 </connection>
             </wdarking_hooks_read>
         </resources>
-        <events>
+        <!-- <events>
             <customer_save_before>
-                <!-- identifier of the event we want to catch -->
                 <observers>
                     <customer_save_before_handler>
-                        <!-- identifier of the event handler -->
                         <type>model</type>
-                        <!-- class method call type; valid are model, object and singleton -->
                         <class>hooks/observer</class>
-                        <!-- observers class alias -->
                         <method>customerSaveBefore</method>
-                        <!-- observer's method to be called -->
                         <args></args>
-                        <!-- additional arguments passed to observer -->
                     </customer_save_before_handler>
                 </observers>
             </customer_save_before>
-        </events>
+        </events> -->
     </global>
     <admin>
         <routers>
@@ -145,6 +139,14 @@
                     <model>hooks/cron::hookPropagator</model>
                 </run>
             </hooks_hookpropagator>
+            <hooks_createcustomerpropagation>
+                <schedule>
+                    <cron_expr>* * * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>hooks/cron::createCustomerPropagation</model>
+                </run>
+            </hooks_createcustomerpropagation>
         </jobs>
     </crontab>
 </config>

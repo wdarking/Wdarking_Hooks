@@ -20,8 +20,11 @@ class Wdarking_Hooks_Model_Observer
 
         if ($customer->isObjectNew()) {
 
+            $phone = null;
+
             $addresses = [];
             foreach ($customer->getAddressesCollection() as $_address) {
+
                 $address = [
                     'street' => $_address->getStreet(1),
                     'number' => $_address->getStreet(2),
@@ -38,15 +41,21 @@ class Wdarking_Hooks_Model_Observer
                     ]
                 ];
 
+                if ($_address->getIsDefaultBilling()) {
+                    $phone = $_address->getTelephone();
+                }
+
                 array_push($addresses, $address);
             }
 
             $data = [
                 'name' => $customer->getName(),
                 'document' => $customer->getTaxvat(),
+                'phone' => $phone,
                 'email' => $customer->getEmail(),
-                'password' => Mage::helper('core')->encrypt($customer->getPassword()),
-                'password_confirmation' => Mage::helper('core')->encrypt($customer->getPassword()),
+                // 'password' => Mage::helper('core')->encrypt($customer->getPassword()),
+                'password' => $customer->getPasswordHash(),
+                // 'password_confirmation' => Mage::helper('core')->encrypt($customer->getPassword()),
                 'additional_info' => [
                     'source' => 'magento',
                     'magento_id' => $customer->getId(),
@@ -56,6 +65,8 @@ class Wdarking_Hooks_Model_Observer
             if (count($addresses)) {
                 $data['addresses'] = $addresses;
             }
+
+            $data = ['customers' => [$data]];
 
             $this->createPropagation('customer_save', $data);
         }

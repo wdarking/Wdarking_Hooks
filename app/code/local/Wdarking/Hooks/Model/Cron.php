@@ -8,6 +8,88 @@
  */
 class Wdarking_Hooks_Model_Cron
 {
+    public function createCustomerPropagation()
+    {
+        $customers = Mage::getModel('customer/customer')->getCollection()
+            ->addAttributeToSelect('*')
+            ->addAttributeToFilter([
+                ['attribute' => 'wdk_hooks_propagation_status', 'null' => true],
+                ['attribute' => 'wdk_hooks_propagation_status', 'eq' => ''],
+            ], '', 'left');
+
+        $customers->getSelect()->limit(1);
+
+        foreach ($customers as $customer) {
+
+            $phone = null;
+
+            $addresses = [];
+
+            if ($billingAddress = $customer->getPrimaryBillingAddress()) {
+                array_push($addresses, [
+                    'label' => 'billing',
+                    'street' => $billingAddress->getStreet(1),
+                    'number' => $billingAddress->getStreet(2),
+                    'district' => $billingAddress->getStreet(3),
+                    'complement' => $billingAddress->getStreet(4),
+                    'city' => $billingAddress->getCity(),
+                    'postcode' => $billingAddress->getPostcode(),
+                    'state' => $billingAddress->getRegionId(),
+                    'country' => $billingAddress->getCountryId(),
+                    'additional_info' => [
+                        'phone' => $billingAddress->getTelephone(),
+                    ]
+                ]);
+
+                $phone = $billingAddress->getTelephone();
+            }
+
+            if ($shippingAddress = $customer->getPrimaryShippingAddress()) {
+                array_push($addresses, [
+                    'label' => 'shipping',
+                    'street' => $shippingAddress->getStreet(1),
+                    'number' => $shippingAddress->getStreet(2),
+                    'district' => $shippingAddress->getStreet(3),
+                    'complement' => $shippingAddress->getStreet(4),
+                    'city' => $shippingAddress->getCity(),
+                    'postcode' => $shippingAddress->getPostcode(),
+                    'state' => $shippingAddress->getRegionId(),
+                    'country' => $shippingAddress->getCountryId(),
+                    'additional_info' => [
+                        'phone' => $shippingAddress->getTelephone(),
+                    ]
+                ]);
+            }
+
+            $data = [
+                'name' => $customer->getName(),
+                'document' => $customer->getTaxvat(),
+                'phone' => $phone,
+                'email' => $customer->getEmail(),
+                'password' => $customer->getPasswordHash(),
+                'additional_info' => [
+                    'source' => 'magento',
+                    'magento_id' => $customer->getId(),
+                    'magento_created_at' => $customer->getCreatedAt(),
+                ],
+                'created_at' => $customer->getCreatedAt(),
+            ];
+
+            if (count($addresses)) {
+                $data['addresses'] = $addresses;
+            }
+
+            $data = ['customers' => [$data]];
+
+            $propagation = Mage::getModel('hooks/propagation');
+            $propagation->event = 'unpropagated_customer';
+            $propagation->data = json_encode($data);
+            $propagation->save();
+
+            $customer->setWdkHooksPropagationStatus(time());
+            $customer->save();
+        }
+    }
 
     /**
      * Propagate all pending propagations to
@@ -20,6 +102,8 @@ class Wdarking_Hooks_Model_Cron
         $propagations = Mage::getModel('hooks/propagation')->getCollection()
             ->addFieldToFilter('propagated_at', ['null' => true])
             ->addFieldToFilter('backoff_at', ['null' => true]);
+
+        $propagations->getSelect()->limit(1);
 
         foreach ($propagations as $propagation) {
 
@@ -41,7 +125,7 @@ class Wdarking_Hooks_Model_Cron
                     Mage::log('Wdarking_Hooks_Model_Cron::hookPropagator response message: '.$response->getMessage());
                     Mage::log('Wdarking_Hooks_Model_Cron::hookPropagator response body: '.$response->getBody());
 
-                    if ($propagation->getTries() >= 10) {
+                    if ($propagation->getTries() >= 3) {
                         $propagation->setBackoffAt(time());
                     }
                 }
@@ -64,14 +148,6 @@ class Wdarking_Hooks_Model_Cron
      */
     public function post($url, array $data)
     {
-        if (isset($data['password'])) {
-            $data['password'] = Mage::helper('core')->decrypt($data['password']);
-        }
-
-        if (isset($data['password_confirmation'])) {
-            $data['password_confirmation'] = Mage::helper('core')->decrypt($data['password_confirmation']);
-        }
-
         $client = new Varien_Http_Client($url);
         $client->setHeaders('Content-type', 'application/json');
         $client->setHeaders('Accept', 'application/json');
