@@ -29,7 +29,7 @@ class Wdarking_Hooks_Model_Observer
                     'name_prefix' => $customer->getPrefix(),
                 ],
                 'additional_info' => [
-                    'source' => 'magento'
+                    'source' => 'magento1'
                 ]
             ];
 
