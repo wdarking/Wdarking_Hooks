@@ -20,55 +20,24 @@ class Wdarking_Hooks_Model_Observer
 
         if ($customer->isObjectNew()) {
 
-            $phone = null;
-
-            $addresses = [];
-            foreach ($customer->getAddressesCollection() as $_address) {
-
-                $address = [
-                    'street' => $_address->getStreet(1),
-                    'number' => $_address->getStreet(2),
-                    'district' => $_address->getStreet(3),
-                    'complement' => $_address->getStreet(4),
-                    'city' => $_address->getCity(),
-                    'postcode' => $_address->getPostcode(),
-                    'state' => $_address->getRegionId(),
-                    'country' => $_address->getCountryId(),
-                    'additional_info' => [
-                        'is_default_billing' => $_address->getIsDefaultBilling(),
-                        'is_default_shipping' => $_address->getIsDefaultShipping(),
-                        'phone' => $_address->getTelephone(),
-                    ]
-                ];
-
-                if ($_address->getIsDefaultBilling()) {
-                    $phone = $_address->getTelephone();
-                }
-
-                array_push($addresses, $address);
-            }
-
             $data = [
-                'name' => $customer->getName(),
+                'name' => $customer->getFirstname() . " " . $customer->getLastname(),
                 'document' => $customer->getTaxvat(),
-                'phone' => $phone,
                 'email' => $customer->getEmail(),
-                // 'password' => Mage::helper('core')->encrypt($customer->getPassword()),
                 'password' => $customer->getPasswordHash(),
-                // 'password_confirmation' => Mage::helper('core')->encrypt($customer->getPassword()),
+                'attributes' => [
+                    'name_prefix' => $customer->getPrefix(),
+                ],
                 'additional_info' => [
-                    'source' => 'magento',
-                    'magento_id' => $customer->getId(),
+                    'source' => 'magento'
                 ]
             ];
 
-            if (count($addresses)) {
-                $data['addresses'] = $addresses;
+            if ($billing = $customer->getPrimaryBillingAddress()) {
+                $data['phone'] = $billing->getTelephone();
             }
 
-            $data = ['customers' => [$data]];
-
-            $this->createPropagation('customer_save', $data);
+            $this->createPropagation('new_account', $data);
         }
     }
 

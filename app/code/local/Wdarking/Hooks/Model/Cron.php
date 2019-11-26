@@ -8,89 +8,6 @@
  */
 class Wdarking_Hooks_Model_Cron
 {
-    public function createCustomerPropagation()
-    {
-        $customers = Mage::getModel('customer/customer')->getCollection()
-            ->addAttributeToSelect('*')
-            ->addAttributeToFilter([
-                ['attribute' => 'wdk_hooks_propagation_status', 'null' => true],
-                ['attribute' => 'wdk_hooks_propagation_status', 'eq' => ''],
-            ], '', 'left');
-
-        $customers->getSelect()->limit(1);
-
-        foreach ($customers as $customer) {
-
-            $phone = null;
-
-            $addresses = [];
-
-            if ($billingAddress = $customer->getPrimaryBillingAddress()) {
-                array_push($addresses, [
-                    'label' => 'billing',
-                    'street' => $billingAddress->getStreet(1),
-                    'number' => $billingAddress->getStreet(2),
-                    'district' => $billingAddress->getStreet(3),
-                    'complement' => $billingAddress->getStreet(4),
-                    'city' => $billingAddress->getCity(),
-                    'postcode' => $billingAddress->getPostcode(),
-                    'state' => $billingAddress->getRegionId(),
-                    'country' => $billingAddress->getCountryId(),
-                    'additional_info' => [
-                        'phone' => $billingAddress->getTelephone(),
-                    ]
-                ]);
-
-                $phone = $billingAddress->getTelephone();
-            }
-
-            if ($shippingAddress = $customer->getPrimaryShippingAddress()) {
-                array_push($addresses, [
-                    'label' => 'shipping',
-                    'street' => $shippingAddress->getStreet(1),
-                    'number' => $shippingAddress->getStreet(2),
-                    'district' => $shippingAddress->getStreet(3),
-                    'complement' => $shippingAddress->getStreet(4),
-                    'city' => $shippingAddress->getCity(),
-                    'postcode' => $shippingAddress->getPostcode(),
-                    'state' => $shippingAddress->getRegionId(),
-                    'country' => $shippingAddress->getCountryId(),
-                    'additional_info' => [
-                        'phone' => $shippingAddress->getTelephone(),
-                    ]
-                ]);
-            }
-
-            $data = [
-                'name' => $customer->getName(),
-                'document' => $customer->getTaxvat(),
-                'phone' => $phone,
-                'email' => $customer->getEmail(),
-                'password' => $customer->getPasswordHash(),
-                'additional_info' => [
-                    'source' => 'magento',
-                    'magento_id' => $customer->getId(),
-                    'magento_created_at' => $customer->getCreatedAt(),
-                ],
-                'created_at' => $customer->getCreatedAt(),
-            ];
-
-            if (count($addresses)) {
-                $data['addresses'] = $addresses;
-            }
-
-            $data = ['customers' => [$data]];
-
-            $propagation = Mage::getModel('hooks/propagation');
-            $propagation->event = 'unpropagated_customer';
-            $propagation->data = json_encode($data);
-            $propagation->save();
-
-            $customer->setWdkHooksPropagationStatus(time());
-            $customer->save();
-        }
-    }
-
     /**
      * Propagate all pending propagations to
      * hooks with same event attribute value.
@@ -113,7 +30,7 @@ class Wdarking_Hooks_Model_Cron
 
             foreach ($hooks as $hook) {
 
-                $response = $this->post($hook->getHookUrl(), json_decode($propagation->getData('data'), true));
+                $response = $this->post($hook->getHookUrl(), json_decode($propagation->getData('data'), true), $hook->token);
 
                 $propagation->setResponseStatus($response->getStatus()." - ".$response->getMessage());
                 $propagation->setResponseData($response->getBody());
@@ -146,13 +63,21 @@ class Wdarking_Hooks_Model_Cron
      * @param  array  $data
      * @return Zend_Http_Response
      */
-    public function post($url, array $data)
+    public function post($url, array $data, $secret = null)
     {
         $client = new Varien_Http_Client($url);
         $client->setHeaders('Content-type', 'application/json');
         $client->setHeaders('Accept', 'application/json');
+
+        $payload = json_encode(['payload' => $data]);
+
+        if ($secret) {
+            $signature = hash_hmac('sha256', $payload, $secret);
+            $client->setHeaders('Signature', $signature);
+        }
+
         $client->setMethod(Varien_Http_Client::POST);
-        $client->setRawData(json_encode($data), 'application/json');
+        $client->setRawData($payload, 'application/json');
 
         $response = $client->request();
 

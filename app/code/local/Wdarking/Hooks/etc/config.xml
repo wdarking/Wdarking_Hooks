@@ -53,7 +53,7 @@
                 </connection>
             </wdarking_hooks_read>
         </resources>
-        <!-- <events>
+        <events>
             <customer_save_before>
                 <observers>
                     <customer_save_before_handler>
@@ -64,7 +64,7 @@
                     </customer_save_before_handler>
                 </observers>
             </customer_save_before>
-        </events> -->
+        </events>
     </global>
     <admin>
         <routers>
@@ -139,14 +139,6 @@
                     <model>hooks/cron::hookPropagator</model>
                 </run>
             </hooks_hookpropagator>
-            <hooks_createcustomerpropagation>
-                <schedule>
-                    <cron_expr>* * * * *</cron_expr>
-                </schedule>
-                <run>
-                    <model>hooks/cron::createCustomerPropagation</model>
-                </run>
-            </hooks_createcustomerpropagation>
         </jobs>
     </crontab>
 </config>
