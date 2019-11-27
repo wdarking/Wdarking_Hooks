@@ -22,7 +22,7 @@ class Wdarking_Hooks_Model_Observer
 
             $data = [
                 'name' => $customer->getFirstname() . " " . $customer->getLastname(),
-                'document' => $customer->getTaxvat(),
+                'document' => preg_replace('/[^0-9]/', '', $customer->getTaxvat()),
                 'email' => $customer->getEmail(),
                 'password' => $customer->getPasswordHash(),
                 'attributes' => [
